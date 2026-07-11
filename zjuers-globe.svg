@@ -1,0 +1,27 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="title desc">
+  <title id="title">ZJUers globe</title>
+  <desc id="desc">A polished pink and violet globe icon for ZJUers PRO</desc>
+  <defs>
+    <linearGradient id="globe" x1="18" y1="12" x2="78" y2="86" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#ff9fc8"/>
+      <stop offset=".48" stop-color="#c978f2"/>
+      <stop offset="1" stop-color="#6d7cff"/>
+    </linearGradient>
+    <linearGradient id="shine" x1="22" y1="17" x2="69" y2="62" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#fff" stop-opacity=".72"/>
+      <stop offset="1" stop-color="#fff" stop-opacity="0"/>
+    </linearGradient>
+    <filter id="shadow" x="-30%" y="-30%" width="160%" height="170%">
+      <feDropShadow dx="0" dy="5" stdDeviation="4" flood-color="#a875d9" flood-opacity=".26"/>
+    </filter>
+  </defs>
+  <circle cx="48" cy="47" r="34" fill="url(#globe)" filter="url(#shadow)"/>
+  <path d="M22 34c9-12 24-18 39-16 7 1 13 4 18 8-13-2-27 1-39 9-7 5-13 11-17 18-3-6-4-13-1-19Z" fill="url(#shine)"/>
+  <g fill="none" stroke="#fff" stroke-linecap="round" stroke-opacity=".82">
+    <ellipse cx="48" cy="47" rx="15" ry="34" stroke-width="2"/>
+    <ellipse cx="48" cy="47" rx="30" ry="13" stroke-width="2"/>
+    <path d="M14 47h68M19 33h58M19 61h58" stroke-width="1.8"/>
+  </g>
+  <circle cx="74" cy="19" r="3" fill="#fff" fill-opacity=".9"/>
+  <path d="M82 13v10M77 18h10" stroke="#fff" stroke-width="1.7" stroke-linecap="round" stroke-opacity=".9"/>
+</svg>

@@ -1,0 +1,1021 @@
+<!DOCTYPE html>
+<html lang="zh-CN">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>ZJUersPRO</title>
+    <link rel="icon" type="image/svg+xml" href="zjuers-globe.svg">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700;800&display=swap" rel="stylesheet">
+    <style>
+        :root {
+            --bg-color: #0f0c1b; /* Midnight deep purple */
+            --card-bg: rgba(25, 18, 35, 0.45); /* Dark Premium Glass */
+            --card-border: rgba(255, 255, 255, 0.08); /* Faint reflection border */
+            --text-primary: #fdfbfb; /* White ink */
+            --text-secondary: #a395b0; /* Muted lavender ink */
+            --accent-color: #ff758c; /* Ins rich magenta/sunset */
+            --danger-color: #ff3b30;
+            --hover-bg: rgba(45, 30, 60, 0.5); /* Hover dark glass */
+            --card-radius: 18px; /* Apple store utility card radius */
+            --item-radius: 8px; /* Apple utility button radius */
+        }
+
+        body {
+            margin: 0;
+            font-family: "SF Pro Text", -apple-system, BlinkMacSystemFont, "Segoe UI", "PingFang SC", "Hiragino Sans GB", "Microsoft YaHei", "Helvetica Neue", Helvetica, Arial, sans-serif;
+            background-color: var(--bg-color);
+            background-image: 
+                radial-gradient(circle at 10% 20%, rgba(255, 117, 140, 0.15), transparent 45%),
+                radial-gradient(circle at 90% 15%, rgba(255, 154, 68, 0.15), transparent 45%),
+                radial-gradient(circle at 50% 85%, rgba(138, 43, 226, 0.15), transparent 55%);
+            background-attachment: fixed;
+            color: var(--text-primary);
+            -webkit-font-smoothing: antialiased;
+            min-height: 100vh;
+            display: flex;
+            flex-direction: column;
+            align-items: center;
+        }
+
+
+
+        .btn-system {
+            background: transparent;
+            border: 1px solid var(--accent-color);
+            color: var(--accent-color);
+            padding: 8px 16px;
+            border-radius: 9999px; /* Apple pill */
+            font-size: 14px;
+            font-weight: 400;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            display: flex;
+            align-items: center;
+            gap: 6px;
+        }
+        
+        .btn-system:hover {
+            background: rgba(0, 102, 204, 0.05); /* Action blue tint */
+        }
+        
+        .btn-system:active {
+            transform: scale(0.95); /* Apple tactile press */
+        }
+        
+        .btn-system.active {
+            background: var(--accent-color);
+            color: #ffffff;
+            border-color: var(--accent-color);
+        }
+
+        /* Header & Search (Spotlight style) */
+        /* Header & Search */
+        header.main-header {
+            position: relative;
+            z-index: 100;
+            display: flex;
+            align-items: center;
+            justify-content: flex-start; /* Move logo to the left */
+            flex-wrap: wrap; /* Prevent overlapping on smaller widths */
+            gap: 40px;
+            width: 100%;
+            max-width: 1200px;
+            margin: 40px auto 60px auto; /* Increased bottom margin to distance from cards below */
+            padding: 0 30px; /* Slight indentation so it doesn't touch the absolute left boundary */
+            box-sizing: border-box;
+        }
+
+        .header-left {
+            display: flex;
+            flex-direction: column;
+            align-items: flex-start;
+            flex: 0 0 auto;
+            max-width: 400px;
+            transform: translateX(40px); /* Visually shift right for a centered feel without touching layout flow */
+            position: relative; /* Anchor for absolute subtitle */
+        }
+
+        .title-logo {
+            display: flex;
+            align-items: center; /* Center horizontally for superscript layout */
+            justify-content: flex-start;
+            gap: 4px; /* Slightly increase gap so the box doesn't touch the text */
+            margin-bottom: 0; /* Remove margin so absolute subtitle sits directly below */
+            transform: scaleX(0.85); /* Significantly compressed horizontally for a tighter look */
+            transform-origin: left center;
+        }
+
+        .zjuers-text {
+            font-size: 60px; /* Slightly larger for impact */
+            font-weight: 900; /* Heavy / Black weight */
+            letter-spacing: -3.5px; /* Extremely compressed */
+            /* Soft white-pink delicate gradient */
+            background: linear-gradient(135deg, rgba(255, 255, 255, 1) 0%, rgba(255, 220, 230, 0.9) 100%);
+            -webkit-background-clip: text;
+            color: transparent;
+            /* Soft glass stroke */
+            -webkit-text-stroke: 1.5px rgba(255, 255, 255, 0.6);
+            font-family: "SF Pro Display", -apple-system, BlinkMacSystemFont, "Helvetica Neue", Arial, sans-serif;
+            /* Delicate pink glowing drop-shadow */
+            filter: drop-shadow(0 8px 20px rgba(255, 200, 215, 0.4));
+        }
+
+        .custom-logo {
+            height: 44px; /* Scaled down to closely match the original text logo cap-height */
+            width: auto;
+            object-fit: contain;
+        }
+
+
+
+        .header-right.search-container {
+            flex: 0 0 820px; /* Stretched by 120px to compensate for the left shift, keeping right edge stationary */
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+        }
+
+        .search-box {
+            display: flex;
+            align-items: center;
+            background: var(--card-bg); /* Apple canvas (glass) */
+            border: 1px solid var(--card-border);
+            border-radius: 9999px; /* Apple pill shape */
+            padding: 4px 6px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.04), inset 0 1px 0 rgba(255, 255, 255, 0.8);
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .search-box:focus-within {
+            border-color: var(--accent-color);
+            background: rgba(35, 25, 45, 0.85); /* Darker glass focus */
+            box-shadow: 0 8px 32px rgba(0, 0, 0, 0.2), inset 0 1px 0 rgba(255, 255, 255, 0.1), 0 0 0 3px rgba(255, 117, 140, 0.25); /* Ins dark style focus ring */
+        }
+
+        .search-icon {
+            padding: 0 16px;
+            color: var(--text-secondary);
+        }
+
+        .search-input {
+            flex: 1;
+            background: transparent;
+            border: none;
+            color: var(--text-primary);
+            font-size: 20px;
+            padding: 12px 0;
+            outline: none;
+            font-weight: 400;
+        }
+
+        .search-input::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .engine-toggle {
+            background: rgba(255, 255, 255, 0.08);
+            border: 1px solid rgba(255, 255, 255, 0.15);
+            color: var(--text-secondary);
+            border-radius: 50%;
+            width: 32px;
+            height: 32px;
+            padding: 0;
+            font-size: 14px;
+            font-weight: 600;
+            cursor: pointer;
+            margin-right: 6px;
+            transition: all 0.2s;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            flex-shrink: 0;
+        }
+        .engine-toggle:hover {
+            background: rgba(255, 255, 255, 0.15);
+            color: var(--text-primary);
+        }
+
+        /* Grid Layout */
+        .container {
+            width: 100%;
+            max-width: 1200px;
+            padding: 0 20px 60px 20px;
+            box-sizing: border-box;
+            display: grid;
+            grid-template-columns: repeat(auto-fill, minmax(320px, 1fr));
+            gap: 24px;
+        }
+
+        /* Custom Section (Full Width) */
+        .custom-section-card {
+            grid-column: 1 / -1; /* spans full width */
+            background: var(--card-bg); /* Glass */
+            border: 1px solid var(--card-border);
+            border-radius: var(--card-radius); /* 18px */
+            padding: 24px 30px;
+            margin-bottom: 10px;
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+        }
+
+        .custom-section-card .links-grid {
+            display: flex;
+            flex-wrap: wrap;
+            align-items: center;
+            gap: 12px;
+        }
+
+        .custom-section-card .link-item {
+            display: inline-block;
+            background: transparent;
+            border: 1px solid var(--card-border); /* Hairline */
+            height: 40px; 
+            line-height: 38px;
+            padding: 0 28px; /* Greatly increased side padding to make them longer based on text */
+            border-radius: var(--item-radius); /* 8px Apple utility button */
+            text-align: center;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+            box-sizing: border-box;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 400;
+            letter-spacing: -0.224px;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .custom-section-card .link-item:hover {
+            background: var(--hover-bg); /* f0f0f0 */
+        }
+        
+        .custom-section-card .link-item:active {
+            transform: scale(0.95); /* Apple tactile physics */
+        }
+
+        /* Regular Category Cards */
+        .category-card {
+            background: var(--card-bg); /* Glass */
+            border: 1px solid var(--card-border); /* Hairline */
+            border-radius: var(--card-radius); /* 18px */
+            padding: 24px;
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            box-shadow: 0 12px 40px rgba(0, 0, 0, 0.03), inset 0 1px 0 rgba(255, 255, 255, 0.6);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .category-header {
+            margin-bottom: 16px;
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+        }
+
+        .category-title {
+            font-size: 17px;
+            font-weight: 600; /* Apple body-strong */
+            color: var(--text-primary);
+            margin: 0;
+            letter-spacing: -0.374px; /* Apple tight body tracking */
+        }
+
+        /* Links (Original ZJUers Style) */
+        .links-grid {
+            display: grid;
+            grid-template-columns: repeat(3, 1fr);
+            gap: 8px;
+        }
+
+        .link-wrapper {
+            position: relative;
+        }
+
+        .link-item {
+            display: block;
+            text-decoration: none;
+            color: var(--text-primary);
+            font-size: 14px;
+            font-weight: 400;
+            letter-spacing: -0.224px;
+            padding: 8px 12px;
+            background: transparent;
+            border: 1px solid var(--card-border);
+            border-radius: var(--item-radius); /* 8px */
+            text-align: center;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .link-item:hover {
+            background-color: var(--hover-bg); /* f0f0f0 */
+        }
+        
+        .link-item:active {
+            transform: scale(0.95); /* Apple Tactile physics */
+        }
+
+        /* Edit Mode Styles */
+        body.edit-mode .link-item {
+            background-color: rgba(255,255,255,0.03);
+            pointer-events: none;
+            padding-right: 28px;
+        }
+
+        body.edit-mode .link-item:hover {
+            background-color: rgba(255,255,255,0.08);
+        }
+
+        .delete-btn {
+            display: none;
+            position: absolute;
+            right: 8px;
+            top: 50%;
+            transform: translateY(-50%);
+            width: 20px;
+            height: 20px;
+            background: var(--danger-color);
+            color: white;
+            border: none;
+            border-radius: 50%;
+            cursor: pointer;
+            font-size: 14px;
+            line-height: 20px;
+            text-align: center;
+            padding: 0;
+            box-shadow: 0 2px 5px rgba(0,0,0,0.3);
+        }
+
+        body.edit-mode .delete-btn {
+            display: block;
+            animation: popIn 0.3s cubic-bezier(0.175, 0.885, 0.32, 1.275);
+        }
+
+        @keyframes popIn {
+            0% { transform: translateY(-50%) scale(0); }
+            100% { transform: translateY(-50%) scale(1); }
+        }
+
+        .add-link-btn {
+            display: none;
+            background: rgba(255,255,255,0.05);
+            border: none;
+            color: var(--accent-color);
+            padding: 8px 12px;
+            border-radius: var(--item-radius);
+            font-size: 14px;
+            font-weight: 500;
+            cursor: pointer;
+            text-align: center;
+            width: 100%;
+            margin-top: 12px;
+            transition: background 0.2s;
+        }
+        
+        .add-link-btn:hover {
+            background: rgba(10, 132, 255, 0.15);
+        }
+
+        body.edit-mode .add-link-btn {
+            display: block;
+        }
+
+        /* Modal (Apple style) */
+        .modal-overlay {
+            display: none;
+            position: fixed;
+            top: 0; left: 0; right: 0; bottom: 0;
+            background: rgba(0, 0, 0, 0.6); /* Dark overlay */
+            backdrop-filter: blur(10px);
+            -webkit-backdrop-filter: blur(10px);
+            z-index: 1000;
+            justify-content: center;
+            align-items: center;
+            opacity: 0;
+            transition: opacity 0.3s;
+        }
+        
+        .modal-overlay.active {
+            display: flex;
+            opacity: 1;
+        }
+
+        .modal {
+            background: var(--card-bg); /* Dark modal bg matching theme */
+            backdrop-filter: blur(40px);
+            -webkit-backdrop-filter: blur(40px);
+            border: 1px solid var(--card-border);
+            border-radius: var(--card-radius); /* Shape lock */
+            width: 100%;
+            max-width: 320px;
+            padding: 24px;
+            box-shadow: 0 24px 48px rgba(0, 0, 0, 0.3), inset 0 1px 0 rgba(255, 255, 255, 0.1);
+            transform: scale(0.95);
+            transition: transform 0.3s cubic-bezier(0.16, 1, 0.3, 1);
+            text-align: center;
+            color: var(--text-primary);
+        }
+        
+        .modal-overlay.active .modal {
+            transform: scale(1);
+        }
+
+        .modal h3 {
+            margin: 0 0 8px 0;
+            font-size: 18px;
+            font-weight: 600;
+        }
+        
+        .modal p {
+            margin: 0 0 20px 0;
+            font-size: 13px;
+            color: var(--text-secondary);
+        }
+
+        .form-control {
+            width: 100%;
+            padding: 12px;
+            background: rgba(255, 255, 255, 0.05); /* Dark theme inputs */
+            border: 1px solid rgba(255, 255, 255, 0.1);
+            border-radius: var(--item-radius); /* Shape lock */
+            color: var(--text-primary);
+            font-size: 15px;
+            box-sizing: border-box;
+            outline: none;
+            margin-bottom: 12px;
+            transition: all 0.2s;
+        }
+        
+        .form-control:focus {
+            border-color: var(--accent-color);
+            background: rgba(255, 255, 255, 0.1);
+            box-shadow: 0 0 0 2px rgba(255, 117, 140, 0.2);
+        }
+        
+        .form-control::placeholder {
+            color: var(--text-secondary);
+        }
+
+        .modal-actions {
+            display: flex;
+            gap: 12px;
+            margin-top: 10px;
+        }
+
+        .btn-modal {
+            flex: 1;
+            padding: 12px;
+            border-radius: var(--item-radius); /* Shape lock */
+            border: none;
+            font-size: 14px; /* More refined */
+            font-weight: 600;
+            cursor: pointer;
+            transition: all 0.2s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+        
+        .btn-modal:active {
+            transform: scale(0.96); /* Tactile feedback */
+        }
+        
+        .btn-modal-cancel {
+            background: rgba(255, 255, 255, 0.1); /* Dark mode cancel */
+            color: var(--text-primary);
+        }
+        
+        .btn-modal-primary {
+            background: var(--accent-color);
+            color: white;
+        }
+
+        /* Footer */
+        footer {
+            margin-top: auto;
+            padding: 30px;
+            color: var(--text-secondary);
+            font-size: 12px;
+        }
+    </style>
+</head>
+<body>
+
+
+
+    <header class="main-header">
+        <div class="header-left">
+            <div class="title-logo">
+                <img src="logo_transparent.png" class="custom-logo" alt="Logo">
+            </div>
+        </div>
+        <div class="header-right search-container">
+            <form class="search-box" id="search-form" action="https://www.google.com/search" method="get" target="_blank">
+                <div class="search-icon">
+                    <svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><circle cx="11" cy="11" r="8"></circle><line x1="21" y1="21" x2="16.65" y2="16.65"></line></svg>
+                </div>
+                <input type="text" name="q" id="search-input" class="search-input" placeholder="使用 Google 搜索全网..." autocomplete="off">
+                <button type="button" class="engine-toggle" id="engine-toggle" title="点击切换搜索引擎">G</button>
+            </form>
+        </div>
+    </header>
+
+    <div class="container" id="nav-container">
+        <!-- 内容渲染 -->
+    </div>
+
+    <footer>
+        ZJUers PRO
+    </footer>
+
+    <!-- 弹窗 -->
+    <div class="modal-overlay" id="modal">
+        <div class="modal">
+            <h3>添加专属网址</h3>
+            <p>将其固定在顶部的个人板块中</p>
+            <input type="text" id="inputName" class="form-control" placeholder="名称 (如: 教务网)" autocomplete="off">
+            <input type="text" id="inputUrl" class="form-control" placeholder="链接 (如: https://...)" autocomplete="off">
+            <div class="modal-actions">
+                <button class="btn-modal btn-modal-cancel" id="modalCancelBtn">取消</button>
+                <button class="btn-modal btn-modal-primary" id="modalSaveBtn">保存</button>
+            </div>
+        </div>
+    </div>
+
+    <script>
+        // 核心原版数据
+        const originalData = [
+          {
+            "category": "浙大 · 教学",
+            "links": [
+              { "name": "学在浙大", "url": "https://courses.zju.edu.cn/user/index" },
+              { "name": "教务网(本)", "url": "https://zdbk.zju.edu.cn/" },
+              { "name": "大先生AI", "url": "https://chat.zju.edu.cn" },
+              { "name": "图书馆预约", "url": "https://booking.lib.zju.edu.cn/" },
+              { "name": "智云课堂", "url": "https://classroom.zju.edu.cn/" },
+              { "name": "网上报名", "url": "https://zdbk.zju.edu.cn/kszx/index/initMenu.zf" },
+              { "name": "教务网(研)", "url": "https://yjsy.zju.edu.cn/" },
+              { "name": "研在浙大", "url": "https://research.zju.edu.cn" },
+              { "name": "PTA", "url": "https://pintia.cn/problem-sets?tab=0" },
+              { "name": "素质拓展网", "url": "https://sztz.zju.edu.cn/" },
+              { "name": "教学资源管理", "url": "http://jxzygl.zju.edu.cn/zypt/teacher/home" },
+              { "name": "教师信息查询", "url": "https://person.zju.edu.cn/" },
+              { "name": "启真在线", "url": "https://qzonline.zju.edu.cn/hom/uni#/home" },
+              { "name": "竞赛管理", "url": "http://kyjs.zju.edu.cn/preview" },
+              { "name": "对外交流", "url": "https://ugrs.zju.edu.cn/dwjlfwpt/" }
+            ]
+          },
+          {
+            "category": "浙大 · 信息化服务",
+            "links": [
+              { "name": "RVPN", "url": "https://vpn.zju.edu.cn/" },
+              { "name": "WebVPN", "url": "https://webvpn.zju.edu.cn/" },
+              { "name": "上网认证", "url": "http://net3.zju.edu.cn/" },
+              { "name": "正版软件", "url": "http://ms.zju.edu.cn/" },
+              { "name": "浙大邮箱", "url": "https://zjuem.zju.edu.cn/" },
+              { "name": "网费管理", "url": "https://myvpn.zju.edu.cn/" },
+              { "name": "浙大云盘", "url": "https://pan.zju.edu.cn/zjusso/" },
+              { "name": "浙大语雀", "url": "https://yuque.zju.edu.cn/" },
+              { "name": "浙大表单", "url": "https://form.zju.edu.cn/" },
+              { "name": "浙大服务平台", "url": "https://service.zju.edu.cn/" },
+              { "name": "校务服务网", "url": "https://xwfw.zju.edu.cn/" },
+              { "name": "综合服务网", "url": "https://zhfw.zju.edu.cn/" },
+              { "name": "信息技术中心", "url": "https://itc.zju.edu.cn/main.htm" },
+              { "name": "浙大开源镜像", "url": "https://mirrors.zju.edu.cn/" },
+              { "name": "ZJU Git", "url": "https://git.zju.edu.cn" }
+            ]
+          },
+          {
+            "category": "浙大 · 其它",
+            "links": [
+              { "name": "CC98", "url": "https://www.cc98.org/" },
+              { "name": "NexusHD", "url": "http://www.nexushd.org" },
+              { "name": "朵朵校友圈", "url": "https://www.duoduo.link/" },
+              { "name": "CC98(校外)", "url": "https://webvpn.zju.edu.cn/https/77726476706e69737468656265737421e7e056d22433310830079bab/" },
+              { "name": "ETA", "url": "http://eta.zju.edu.cn/" },
+              { "name": "班车查询", "url": "http://www.life.zju.edu.cn/_web/_apps/lightapp/busQuery/mobile/app/pub/index.html" },
+              { "name": "团在浙大", "url": "http://tzzd.zju.edu.cn" },
+              { "name": "计财处", "url": "https://cwcx.zju.edu.cn/WFManager/login.jsp" },
+              { "name": "就业服务", "url": "https://www.career.zju.edu.cn/" },
+              { "name": "校园地图", "url": "https://map.zju.edu.cn" },
+              { "name": "本科生院", "url": "https://bksy.zju.edu.cn/" },
+              { "name": "紧急电话", "url": "http://mapp.zju.edu.cn/lightapp/jjdh/www/app/home.html" },
+              { "name": "心理健康中心", "url": "http://www.xlzx.zju.edu.cn/" },
+              { "name": "浙大后勤", "url": "https://zulg.zju.edu.cn/" },
+              { "name": "就餐指数", "url": "https://we.zju.edu.cn/monitor/show_weixin.html" }
+            ]
+          },
+          {
+            "category": "学术搜索 · 查重",
+            "links": [
+              { "name": "浙大图书馆", "url": "https://libweb.zju.edu.cn/" },
+              { "name": "求是学术搜索", "url": "https://zju.summon.serialssolutions.com/" },
+              { "name": "中国知网", "url": "https://www.cnki.net/" },
+              { "name": "谷歌学术", "url": "https://scholar.google.com/" },
+              { "name": "必应学术", "url": "https://cn.bing.com/academic" },
+              { "name": "百度学术", "url": "https://xueshu.baidu.com/" },
+              { "name": "维普网", "url": "https://www.cqvip.com/" },
+              { "name": "爱学术", "url": "https://www.ixueshu.com/" },
+              { "name": "万方数据", "url": "https://www.wanfangdata.com.cn/index.html" },
+              { "name": "Github", "url": "https://github.com/" },
+              { "name": "WOS", "url": "https://www.webofscience.com/" },
+              { "name": "Sci-Hub", "url": "https://sci-hub.ru/" }
+            ]
+          },
+          {
+            "category": "实用工具",
+            "links": [
+              { "name": "一个木函", "url": "https://ol.woobx.cn/" },
+              { "name": "在线工具箱", "url": "https://tool.browser.qq.com/" },
+              { "name": "听歌下载", "url": "http://www.xmsj.org/" },
+              { "name": "百度翻译", "url": "https://fanyi.baidu.com/" },
+              { "name": "谷歌翻译", "url": "https://translate.google.com/" },
+              { "name": "缩略词复原", "url": "https://lab.magiconch.com/nbnhhsh/" },
+              { "name": "短网址工具", "url": "https://sina.lt/" },
+              { "name": "二维码生成器", "url": "https://cli.im/text" },
+              { "name": "文件空投", "url": "https://airportal.cn/" },
+              { "name": "文件格式转换", "url": "https://convertio.co/zh/" },
+              { "name": "PDF工具箱", "url": "https://www.ilovepdf.com/zh-cn" },
+              { "name": "在线图片编辑", "url": "https://www.iloveimg.com/zh-cn" }
+            ]
+          },
+          {
+            "category": "学习 · 影视",
+            "links": [
+              { "name": "MOOC", "url": "https://www.icourse163.org/" },
+              { "name": "智慧树", "url": "https://www.zhihuishu.com/" },
+              { "name": "学习强国", "url": "https://www.xuexi.cn/" },
+              { "name": "Bilibili", "url": "https://www.bilibili.com/" },
+              { "name": "爱奇艺", "url": "https://www.iqiyi.com/" },
+              { "name": "腾讯视频", "url": "https://v.qq.com/" },
+              { "name": "优酷", "url": "https://www.youku.com/" },
+              { "name": "芒果TV", "url": "https://www.mgtv.com/" },
+              { "name": "CCTV", "url": "https://tv.cctv.com/" },
+              { "name": "虎牙直播", "url": "https://www.huya.com/" },
+              { "name": "斗鱼直播", "url": "https://www.douyu.com/" },
+              { "name": "企鹅体育", "url": "https://live.qq.com/" }
+            ]
+          },
+          {
+            "category": "文档办公",
+            "links": [
+              { "name": "腾讯文档", "url": "https://docs.qq.com/desktop/" },
+              { "name": "百度文库", "url": "https://wenku.baidu.com/" },
+              { "name": "秀米", "url": "https://xiumi.us/" },
+              { "name": "Wolfram", "url": "https://www.wolframalpha.com/" },
+              { "name": "Myscript", "url": "https://webdemo.myscript.com/" },
+              { "name": "Geogebra", "url": "https://www.geogebra.org/" },
+              { "name": "问卷星", "url": "https://www.wjx.cn/" },
+              { "name": "视频下载", "url": "https://snapany.com/zh/bilibili" },
+              { "name": "站长工具", "url": "https://tool.chinaz.com/" }
+            ]
+          },
+          {
+            "category": "社交 · 娱乐",
+            "links": [
+              { "name": "知乎", "url": "https://www.zhihu.com/hot" },
+              { "name": "豆瓣", "url": "https://www.douban.com/" },
+              { "name": "NGA", "url": "https://bbs.nga.cn/" },
+              { "name": "微博热搜", "url": "https://s.weibo.com/top/summary" },
+              { "name": "腾讯体育", "url": "https://sports.qq.com/" },
+              { "name": "虎扑网", "url": "https://www.hupu.com/" },
+              { "name": "Pixivic", "url": "https://pixivic.com/" },
+              { "name": "京东商城", "url": "https://www.jd.com/" },
+              { "name": "淘宝网", "url": "https://www.taobao.com/" }
+            ]
+          },
+          {
+            "category": "其它 · 关于本站",
+            "links": [
+              { "name": "网络测速", "url": "https://wangsuceshi.bmcx.com/" },
+              { "name": "浙大校历", "url": "https://zjuers.com/banner/浙江大学2025-2026学年校历.pdf" },
+              { "name": "校网测速", "url": "http://speedtest.zju.edu.cn/" }
+            ]
+          }
+        ];
+
+        let customData = [];
+        let isEditMode = false;
+        
+        let targetList = ''; // 'custom' or 'original'
+        let targetCatIndex = -1;
+
+        function init() {
+            // 加载用户的定制数据
+            const savedCustom = localStorage.getItem('appleZjuersCustom');
+            if (savedCustom) {
+                try { customData = JSON.parse(savedCustom); } 
+                catch(e) { customData = []; }
+            }
+            
+            // 为了展示给用户看，如果没有自定义网址，先加一个演示
+            if (customData.length === 0) {
+                customData = [
+                    { name: "🎓 我的CC98", url: "https://www.cc98.org" }
+                ];
+                saveData();
+            }
+
+            render();
+        }
+
+        function saveData() {
+            localStorage.setItem('appleZjuersCustom', JSON.stringify(customData));
+        }
+
+        function render() {
+            const container = document.getElementById('nav-container');
+            container.innerHTML = '';
+
+            // 1. 渲染【我的专属板块】(横跨全行)
+            const customCard = document.createElement('div');
+            customCard.className = 'custom-section-card';
+            
+            const customHeader = document.createElement('div');
+            customHeader.className = 'category-header';
+            
+            const btnHtml = isEditMode 
+                ? `<button id="editBtn" class="btn-system active" style="margin: 0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M20 6L9 17l-5-5"></path></svg> 完成编辑</button>`
+                : `<button id="editBtn" class="btn-system" style="margin: 0;"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M12 20h9"></path><path d="M16.5 3.5a2.121 2.121 0 0 1 3 3L7 19l-4 1 1-4L16.5 3.5z"></path></svg> 管理收藏</button>`;
+                
+            customHeader.innerHTML = `
+                <h2 class="category-title">✨ 收藏夹</h2>
+                <div style="display: flex; gap: 8px;">
+                    <button id="importBtn" class="btn-system" style="margin: 0;" title="导入书签"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></button>
+                    <button id="exportBtn" class="btn-system" style="margin: 0;" title="导出书签"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg></button>
+                    ${btnHtml}
+                </div>
+            `;
+            
+            const editBtn = customHeader.querySelector('#editBtn');
+            editBtn.addEventListener('click', () => {
+                isEditMode = !isEditMode;
+                if (isEditMode) {
+                    document.body.classList.add('edit-mode');
+                } else {
+                    document.body.classList.remove('edit-mode');
+                }
+                render();
+            });
+
+            const importBtn = customHeader.querySelector('#importBtn');
+            importBtn.addEventListener('click', () => {
+                const input = document.createElement('input');
+                input.type = 'file';
+                input.accept = '.json';
+                input.onchange = (e) => {
+                    const file = e.target.files[0];
+                    if (!file) return;
+                    const reader = new FileReader();
+                    reader.onload = (event) => {
+                        try {
+                            const importedData = JSON.parse(event.target.result);
+                            if (Array.isArray(importedData)) {
+                                const validData = importedData.filter(item => item.name && item.url);
+                                if (validData.length > 0) {
+                                    if (confirm(`成功读取 ${validData.length} 个书签。\n\n点击"确定"覆盖当前书签，点击"取消"追加到当前书签后。`)) {
+                                        customData = validData;
+                                    } else {
+                                        customData = customData.concat(validData);
+                                    }
+                                    saveData();
+                                    render();
+                                    alert('导入成功！');
+                                } else {
+                                    alert('导入失败：未发现有效的书签数据。');
+                                }
+                            } else {
+                                alert('导入失败：文件格式不正确。');
+                            }
+                        } catch (err) {
+                            alert('导入失败：无法解析 JSON 文件。');
+                        }
+                    };
+                    reader.readAsText(file);
+                };
+                input.click();
+            });
+
+            const exportBtn = customHeader.querySelector('#exportBtn');
+            exportBtn.addEventListener('click', () => {
+                const dataStr = JSON.stringify(customData, null, 2);
+                const blob = new Blob([dataStr], { type: "application/json" });
+                const url = URL.createObjectURL(blob);
+                const a = document.createElement('a');
+                a.href = url;
+                a.download = "zjuers_bookmarks.json";
+                document.body.appendChild(a);
+                a.click();
+                document.body.removeChild(a);
+                URL.revokeObjectURL(url);
+            });
+            
+            customCard.appendChild(customHeader);
+
+            const customGrid = document.createElement('div');
+            customGrid.className = 'links-grid';
+            
+            customData.forEach((link, linkIndex) => {
+                const wrapper = document.createElement('div');
+                wrapper.className = 'link-wrapper';
+                
+                if (isEditMode) {
+                    wrapper.draggable = true;
+                    wrapper.style.cursor = 'grab';
+                    
+                    wrapper.addEventListener('dragstart', (e) => {
+                        e.dataTransfer.setData('text/plain', linkIndex);
+                        e.dataTransfer.effectAllowed = 'move';
+                        wrapper.style.opacity = '0.4';
+                    });
+                    
+                    wrapper.addEventListener('dragend', () => {
+                        wrapper.style.opacity = '1';
+                        document.querySelectorAll('.link-wrapper').forEach(el => el.style.borderLeft = '');
+                    });
+                    
+                    wrapper.addEventListener('dragover', (e) => {
+                        e.preventDefault();
+                        e.dataTransfer.dropEffect = 'move';
+                        wrapper.style.borderLeft = '2px solid var(--accent-color)';
+                    });
+                    
+                    wrapper.addEventListener('dragleave', () => {
+                        wrapper.style.borderLeft = '';
+                    });
+                    
+                    wrapper.addEventListener('drop', (e) => {
+                        e.preventDefault();
+                        wrapper.style.borderLeft = '';
+                        const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
+                        if (!isNaN(draggedIndex) && draggedIndex !== linkIndex) {
+                            const item = customData.splice(draggedIndex, 1)[0];
+                            customData.splice(linkIndex, 0, item);
+                            saveData();
+                            render();
+                        }
+                    });
+                }
+
+                const a = document.createElement('a');
+                a.className = 'link-item';
+                a.href = link.url;
+                a.textContent = link.name;
+                if (isEditMode) {
+                    a.onclick = (e) => e.preventDefault(); // Prevent accidental clicks while dragging
+                } else {
+                    a.target = '_blank';
+                }
+                
+                const delBtn = document.createElement('button');
+                delBtn.className = 'delete-btn';
+                delBtn.innerHTML = '×';
+                delBtn.onclick = (e) => {
+                    e.preventDefault();
+                    customData.splice(linkIndex, 1);
+                    saveData();
+                    render();
+                };
+
+                wrapper.appendChild(a);
+                wrapper.appendChild(delBtn);
+                customGrid.appendChild(wrapper);
+            });
+            customCard.appendChild(customGrid);
+
+            const addCustomBtn = document.createElement('button');
+            addCustomBtn.className = 'add-link-btn';
+            addCustomBtn.textContent = '+ 添加专属网址';
+            addCustomBtn.onclick = () => openModal('custom', -1);
+            customCard.appendChild(addCustomBtn);
+
+            container.appendChild(customCard);
+
+            // 2. 渲染【原版导航】板块
+            originalData.forEach((section, catIndex) => {
+                const card = document.createElement('div');
+                card.className = 'category-card';
+
+                const header = document.createElement('div');
+                header.className = 'category-header';
+                header.innerHTML = `<h2 class="category-title">${section.category}</h2>`;
+                card.appendChild(header);
+
+                const grid = document.createElement('div');
+                grid.className = 'links-grid';
+
+                section.links.forEach((link, linkIndex) => {
+                    const wrapper = document.createElement('div');
+                    wrapper.className = 'link-wrapper';
+
+                    const a = document.createElement('a');
+                    a.className = 'link-item';
+                    a.href = link.url;
+                    a.textContent = link.name;
+                    a.target = '_blank';
+                    
+                    wrapper.appendChild(a);
+                    grid.appendChild(wrapper);
+                });
+                card.appendChild(grid);
+                container.appendChild(card);
+            });
+        }
+
+
+
+        // 弹窗逻辑
+        const modal = document.getElementById('modal');
+        const inputName = document.getElementById('inputName');
+        const inputUrl = document.getElementById('inputUrl');
+
+        function openModal(listType, catIndex) {
+            targetList = listType;
+            targetCatIndex = catIndex;
+            inputName.value = '';
+            inputUrl.value = '';
+            modal.classList.add('active');
+            inputName.focus();
+        }
+
+        function closeModal() {
+            modal.classList.remove('active');
+        }
+
+        document.getElementById('modalCancelBtn').addEventListener('click', closeModal);
+        
+        document.getElementById('modalSaveBtn').addEventListener('click', () => {
+            const name = inputName.value.trim();
+            let url = inputUrl.value.trim();
+            
+            if (!name) return alert('名称不能为空');
+            if (!url) return alert('链接不能为空');
+            
+            if (!url.startsWith('http://') && !url.startsWith('https://') && !url.startsWith('file://')) {
+                if (/^[a-zA-Z]:\\/.test(url)) {
+                    // Automatically format Windows paths
+                    url = 'file:///' + url.replace(/\\/g, '/');
+                } else if (url.startsWith('/')) {
+                    // Format Unix absolute paths
+                    url = 'file://' + url;
+                } else {
+                    // Default web URL
+                    url = 'https://' + url;
+                }
+            }
+            
+            if (targetList === 'custom') {
+                customData.push({ name, url });
+                saveData();
+                render();
+            }
+            closeModal();
+        });
+
+        // 回车提交
+        modal.addEventListener('keyup', (e) => {
+            if(e.key === 'Enter') document.getElementById('modalSaveBtn').click();
+            if(e.key === 'Escape') closeModal();
+        });
+
+        const engineToggle = document.getElementById('engine-toggle');
+        const searchForm = document.getElementById('search-form');
+        const searchInput = document.getElementById('search-input');
+        
+        let currentEngine = 'google';
+        const engines = {
+            google: {
+                name: 'Google',
+                shortName: 'G',
+                action: 'https://www.google.com/search',
+                placeholder: '使用 Google 搜索全网...'
+            },
+            bing: {
+                name: 'Bing',
+                shortName: 'B',
+                action: 'https://cn.bing.com/search',
+                placeholder: '使用 Bing 搜索全网...'
+            }
+        };
+
+        if(engineToggle) {
+            engineToggle.addEventListener('click', (e) => {
+                e.preventDefault();
+                currentEngine = currentEngine === 'google' ? 'bing' : 'google';
+                const engine = engines[currentEngine];
+                engineToggle.textContent = engine.shortName;
+                searchForm.action = engine.action;
+                searchInput.placeholder = engine.placeholder;
+            });
+        }
+
+        init();
+
+
+    </script>
+</body>
+</html>

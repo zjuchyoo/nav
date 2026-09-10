@@ -28,10 +28,6 @@
     "url": "https://zjuchyoo.github.io/study-assistant/"
   },
   {
-    "name": "粉笔",
-    "url": "https://fenbi.com/"
-  },
-  {
     "name": "Sub2api",
     "url": "localhost:8080"
   },
@@ -54,5 +50,9 @@
   {
     "name": "ipnet",
     "url": "ip.net.coffee"
+  },
+  {
+    "name": "粉笔",
+    "url": "https://fenbi.com/"
   }
 ]

@@ -18,5 +18,9 @@
   {
     "name": "MESL2",
     "url": "https://panel.meslcloud.com/#/dashboard"
+  },
+  {
+    "name": "ChatGPT",
+    "url": "ChatGPT.com"
   }
 ]

@@ -638,6 +638,26 @@
             display: none;
         }
 
+        .pw-submit {
+            width: 100%;
+            margin-bottom: 12px;
+        }
+
+        .pw-submit:disabled {
+            opacity: 0.6;
+            cursor: wait;
+        }
+
+        .pw-error {
+            margin: -4px 0 12px 0;
+            color: var(--danger-color);
+            font-size: 13px;
+        }
+
+        #pwSetupPanel .step-title {
+            margin-bottom: 4px;
+        }
+
         .link-btn {
             margin-top: 14px;
             background: none;
@@ -805,6 +825,16 @@
         <div class="modal modal-wide">
             <h3>同步到 GitHub</h3>
             <p id="syncModalStatus"></p>
+
+            <!-- 已设置过密码的设备：输入密码连接 -->
+            <form id="pwLoginPanel" hidden>
+                <input type="text" name="username" autocomplete="username" value="ZJUers收藏夹" hidden>
+                <input type="password" id="pwLoginInput" class="form-control" placeholder="输入你设置的连接密码" autocomplete="current-password">
+                <div class="pw-error" id="pwLoginError" hidden></div>
+                <button type="submit" class="btn-modal btn-modal-primary pw-submit" id="pwLoginBtn">用密码连接</button>
+                <button type="button" class="link-btn" id="useTokenRouteBtn">没设置过密码，或者忘记了？改用 GitHub 密钥连接</button>
+            </form>
+
             <div id="syncSetup">
                 <ol class="sync-steps">
                     <li>
@@ -838,13 +868,28 @@
                     </li>
                 </ol>
                 <input type="password" id="tokenInput" class="form-control" placeholder="在这里粘贴 ghp_ 开头的密钥" autocomplete="off">
+                <button type="button" class="btn-modal btn-modal-primary pw-submit" id="tokenSaveBtn">连接</button>
                 <div class="sync-faq">
-                    密钥只保存在这台设备的浏览器里，不用另外记下来。以后浏览器被清理了，收藏不会丢，想修改时照这 4 步重新生成一个就行。请不要把密钥发给别人。
+                    连接后可以再设一个你自己的密码，以后其他设备输入密码就能连接，不用再粘贴密钥。请不要把密钥发给别人。
                 </div>
             </div>
+
+            <!-- 已连接的设备：设置或修改连接密码 -->
+            <form id="pwSetupPanel" hidden>
+                <div class="step-title" id="pwSetupTitle">设置连接密码</div>
+                <p id="pwSetupDesc"></p>
+                <input type="text" name="username" autocomplete="username" value="ZJUers收藏夹" hidden>
+                <input type="password" id="pwNew" class="form-control" placeholder="8 位以上，含字母和数字" autocomplete="new-password">
+                <input type="password" id="pwNew2" class="form-control" placeholder="再输入一次" autocomplete="new-password">
+                <div class="pw-error" id="pwSetupError" hidden></div>
+                <button type="submit" class="btn-modal btn-modal-primary pw-submit" id="pwSetupBtn">保存密码</button>
+                <div class="sync-faq">
+                    密码用来给 GitHub 密钥加密，加密后存在公开仓库里，所以别用生日、123456 这类简单密码。忘了也没关系：用 GitHub 密钥重新连接，再设一个新密码就行。
+                </div>
+            </form>
+
             <div class="modal-actions">
                 <button class="btn-modal btn-modal-cancel" id="syncCloseBtn">关闭</button>
-                <button class="btn-modal btn-modal-primary" id="tokenSaveBtn">连接</button>
             </div>
             <button class="link-btn" id="tokenRemoveBtn" hidden>断开连接（删除这台设备上保存的密钥）</button>
         </div>
@@ -1013,7 +1058,9 @@
         const DRAG_TYPE = 'application/x-zjuers-bookmark';
 
         // 收藏夹以 GitHub 仓库里的 bookmarks.json 为准，浏览器里只是副本
-        const GITHUB = { owner: 'zjuchyoo', repo: 'ZJUers_Web', branch: 'main', path: 'bookmarks.json' };
+        const GITHUB = { owner: 'zjuchyoo', repo: 'nav', branch: 'main', path: 'bookmarks.json' };
+        const SYNC_KEY_PATH = 'sync-key.json'; // 用连接密码加密后的 GitHub 密钥
+        const PBKDF2_ITERATIONS = 1000000;
         const TOKEN_KEY = 'appleZjuersGithubToken';
         const SYNC_KEY = 'appleZjuersSync'; // { base, pending }
 
@@ -1174,6 +1221,11 @@
 
             render();
             scheduleSync(0);
+            loadSyncKey().then(info => {
+                syncKeyInfo = info;
+                updateSyncBanner();
+                if (syncModal.classList.contains('active')) updateSyncModal();
+            });
         }
 
         function saveData() {
@@ -1250,23 +1302,88 @@
             return state;
         }
 
-        function encodeBase64(text) {
+        function bytesToBase64(bytes) {
             let binary = '';
-            new TextEncoder().encode(text).forEach(byte => { binary += String.fromCharCode(byte); });
+            bytes.forEach(byte => { binary += String.fromCharCode(byte); });
             return btoa(binary);
         }
 
-        function decodeBase64(base64) {
-            const binary = atob(base64.replace(/\s/g, ''));
-            return new TextDecoder().decode(Uint8Array.from(binary, char => char.charCodeAt(0)));
+        function base64ToBytes(base64) {
+            return Uint8Array.from(atob(base64.replace(/\s/g, '')), char => char.charCodeAt(0));
+        }
+
+        const encodeBase64 = text => bytesToBase64(new TextEncoder().encode(text));
+        const decodeBase64 = base64 => new TextDecoder().decode(base64ToBytes(base64));
+
+        // ---------- 连接密码：用密码加密 GitHub 密钥，存进仓库 ----------
+        async function derivePasswordKey(password, salt, iterations) {
+            const material = await crypto.subtle.importKey('raw', new TextEncoder().encode(password), 'PBKDF2', false, ['deriveKey']);
+            return crypto.subtle.deriveKey(
+                { name: 'PBKDF2', hash: 'SHA-256', salt, iterations },
+                material,
+                { name: 'AES-GCM', length: 256 },
+                false,
+                ['encrypt', 'decrypt']
+            );
+        }
+
+        async function encryptToken(token, password) {
+            const salt = crypto.getRandomValues(new Uint8Array(16));
+            const iv = crypto.getRandomValues(new Uint8Array(12));
+            const key = await derivePasswordKey(password, salt, PBKDF2_ITERATIONS);
+            const ciphertext = new Uint8Array(await crypto.subtle.encrypt({ name: 'AES-GCM', iv }, key, new TextEncoder().encode(token)));
+            return {
+                version: 1,
+                kdf: 'PBKDF2-SHA256',
+                iterations: PBKDF2_ITERATIONS,
+                salt: bytesToBase64(salt),
+                iv: bytesToBase64(iv),
+                ciphertext: bytesToBase64(ciphertext)
+            };
+        }
+
+        // 密码不对时 AES-GCM 校验失败，会抛出异常
+        async function decryptToken(info, password) {
+            const key = await derivePasswordKey(password, base64ToBytes(info.salt), info.iterations);
+            const plain = await crypto.subtle.decrypt({ name: 'AES-GCM', iv: base64ToBytes(info.iv) }, key, base64ToBytes(info.ciphertext));
+            return new TextDecoder().decode(plain);
+        }
+
+        function isValidSyncKey(info) {
+            return Boolean(info) && info.version === 1 && Number.isInteger(info.iterations) && info.iterations >= 100000
+                && ['salt', 'iv', 'ciphertext'].every(field => typeof info[field] === 'string');
+        }
+
+        async function loadSyncKey() {
+            try {
+                const res = await fetch(`${SYNC_KEY_PATH}?t=${Date.now()}`, { cache: 'no-store' });
+                if (!res.ok) return null;
+                const info = await res.json();
+                return isValidSyncKey(info) ? info : null;
+            } catch (e) {
+                return null;
+            }
+        }
+
+        async function uploadSyncKey(info) {
+            const existing = await githubContents('GET', null, SYNC_KEY_PATH);
+            if (!existing.ok && existing.status !== 404) throw syncError(existing.status);
+            const sha = existing.ok ? (await existing.json()).sha : null;
+            const res = await githubContents('PUT', {
+                message: 'Update sync password',
+                content: encodeBase64(JSON.stringify(info, null, 2) + '\n'),
+                branch: GITHUB.branch,
+                ...(sha ? { sha } : {})
+            }, SYNC_KEY_PATH);
+            if (!res.ok) throw syncError(res.status);
         }
 
         function syncError(status) {
             return Object.assign(new Error(`sync failed: ${status}`), { status });
         }
 
-        function githubContents(method, body) {
-            const url = `https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/contents/${GITHUB.path}`
+        function githubContents(method, body, path = GITHUB.path) {
+            const url = `https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/contents/${path}`
                 + (method === 'GET' ? `?ref=${GITHUB.branch}` : '');
             const headers = {
                 Authorization: `Bearer ${getToken()}`,
@@ -1430,20 +1547,27 @@
                          text: '这个密钥没有修改仓库的权限。请按下面第 1 步的按钮重新生成，页面上的勾选项都不要动。' }
         };
 
-        let justConnected = false;
+        let justConnected = false;      // false / 'token' / 'password'：刚刚用哪种方式连接
+        let justConnectedByToken = false; // 刚用 GitHub 密钥连上，提示顺手设置密码
+        let syncKeyInfo = null;         // 仓库里的 sync-key.json，null 表示还没设置过连接密码
+        let useTokenRoute = false;      // 用户选了“改用 GitHub 密钥连接”
 
         function setSyncStatus(status) {
             syncStatus = status;
-            updateSyncButton();
-            updateSyncBanner();
-            if (syncModal.classList.contains('active')) updateSyncModal();
             if (justConnected && status !== 'syncing') {
+                const mode = justConnected;
                 justConnected = false;
-                if (status === 'synced') {
+                if (status === 'synced' && mode === 'password') {
                     closeSyncModal();
+                    showToast('连接成功！已换成 GitHub 上的收藏');
+                } else if (status === 'synced') {
+                    justConnectedByToken = true;
                     showToast('连接成功！收藏夹已保存到 GitHub');
                 }
             }
+            updateSyncButton();
+            updateSyncBanner();
+            if (syncModal.classList.contains('active')) updateSyncModal();
         }
 
         function updateSyncBanner(banner = document.getElementById('syncBanner')) {
@@ -1453,7 +1577,7 @@
             banner.querySelector('span').textContent = message || '';
             banner.querySelector('button').textContent = syncStatus === 'auth' || syncStatus === 'forbidden'
                 ? '重新连接 →'
-                : '花 1 分钟永久保存 →';
+                : syncKeyInfo ? '输入密码连接 →' : '花 1 分钟永久保存 →';
         }
 
         function syncButtonHtml() {
@@ -1473,16 +1597,32 @@
         const tokenInput = document.getElementById('tokenInput');
 
         function updateSyncModal() {
-            const connected = Boolean(getToken()) && !['auth', 'forbidden'].includes(syncStatus);
-            document.getElementById('syncModalStatus').textContent = SYNC_STATUS[syncStatus].text
-                || '把收藏夹保存到你的 GitHub 仓库，浏览器清理数据、换设备都不会丢。每台设备只需连接一次。';
-            document.getElementById('syncSetup').hidden = connected;
-            document.getElementById('tokenSaveBtn').hidden = connected;
-            document.getElementById('tokenRemoveBtn').hidden = !getToken();
+            const hasToken = Boolean(getToken());
+            const tokenBroken = ['auth', 'forbidden'].includes(syncStatus);
+            const connected = hasToken && !tokenBroken;
+            const passwordLogin = !connected && !tokenBroken && Boolean(syncKeyInfo) && !useTokenRoute;
+
+            document.getElementById('syncModalStatus').textContent = passwordLogin
+                ? '输入你设置的连接密码，就能连接，并自动换成 GitHub 上的收藏。'
+                : SYNC_STATUS[syncStatus].text || '把收藏夹保存到你的 GitHub 仓库，浏览器清理数据、换设备都不会丢。每台设备只需连接一次。';
+            document.getElementById('pwLoginPanel').hidden = !passwordLogin;
+            document.getElementById('syncSetup').hidden = connected || passwordLogin;
+            document.getElementById('pwSetupPanel').hidden = !connected;
+            document.getElementById('tokenRemoveBtn').hidden = !hasToken;
+
+            document.getElementById('pwSetupTitle').textContent = syncKeyInfo && !justConnectedByToken ? '修改连接密码' : '设置连接密码';
+            document.getElementById('pwSetupDesc').textContent = justConnectedByToken
+                ? '最后一步：设一个你自己的密码。以后在其他设备或浏览器上，输入这个密码就能连接，不用再粘贴密钥。'
+                : syncKeyInfo
+                    ? '已经设置过连接密码。在这里输入新密码可以修改，旧密码会失效。'
+                    : '设一个你自己的密码。以后在其他设备或浏览器上，输入这个密码就能连接，不用再粘贴密钥。';
         }
 
         function openSyncModal() {
             tokenInput.value = '';
+            useTokenRoute = false;
+            ['pwLoginInput', 'pwNew', 'pwNew2'].forEach(id => { document.getElementById(id).value = ''; });
+            ['pwLoginError', 'pwSetupError'].forEach(id => { document.getElementById(id).hidden = true; });
             // 旧式密钥的备注不能重名，加上时间，重新生成时才不会报错
             const now = new Date();
             const pad = n => String(n).padStart(2, '0');
@@ -1495,6 +1635,7 @@
 
         function closeSyncModal() {
             syncModal.classList.remove('active');
+            justConnectedByToken = false;
         }
 
         document.getElementById('syncCloseBtn').addEventListener('click', closeSyncModal);
@@ -1510,9 +1651,83 @@
             if (!TOKEN_PATTERN.test(token)) return alert('这看起来不是 GitHub 密钥。它应该是 ghp_ 开头的一长串字符，请回到 GitHub 页面重新复制。');
             try { localStorage.setItem(TOKEN_KEY, token); } catch (e) { return alert('浏览器不允许保存密钥（可能是无痕模式）'); }
             tokenInput.value = '';
-            justConnected = true;
+            justConnected = 'token';
             scheduleSync(0);
         }
+
+        function showFormError(id, message) {
+            const el = document.getElementById(id);
+            el.textContent = message;
+            el.hidden = !message;
+        }
+
+        // 用密码连接：解密出 GitHub 密钥，然后以 GitHub 上的收藏为准（本机原来的存进历史）
+        document.getElementById('pwLoginPanel').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const input = document.getElementById('pwLoginInput');
+            const btn = document.getElementById('pwLoginBtn');
+            const password = input.value;
+            if (!password) return showFormError('pwLoginError', '请输入密码');
+
+            btn.disabled = true;
+            btn.textContent = '正在解锁…';
+            showFormError('pwLoginError', '');
+            let token;
+            try {
+                token = await decryptToken(syncKeyInfo, password);
+            } catch (err) {
+                showFormError('pwLoginError', '密码不对，请再试一次');
+                input.select();
+                return;
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '用密码连接';
+            }
+
+            try { localStorage.setItem(TOKEN_KEY, token); } catch (err) { return alert('浏览器不允许保存数据（可能是无痕模式）'); }
+            input.value = '';
+            writeSyncState({ base: [], pending: false });
+            justConnected = 'password';
+            scheduleSync(0);
+        });
+
+        document.getElementById('useTokenRouteBtn').addEventListener('click', () => {
+            useTokenRoute = true;
+            updateSyncModal();
+        });
+
+        function checkNewPassword(password, again) {
+            if (password.length < 8) return '密码至少要 8 位';
+            if (!/[A-Za-z]/.test(password) || !/\d/.test(password)) return '密码要同时包含字母和数字';
+            if (password !== again) return '两次输入的密码不一样';
+            return '';
+        }
+
+        document.getElementById('pwSetupPanel').addEventListener('submit', async (e) => {
+            e.preventDefault();
+            const password = document.getElementById('pwNew').value;
+            const problem = checkNewPassword(password, document.getElementById('pwNew2').value);
+            if (problem) return showFormError('pwSetupError', problem);
+
+            const btn = document.getElementById('pwSetupBtn');
+            btn.disabled = true;
+            btn.textContent = '正在加密并保存…';
+            showFormError('pwSetupError', '');
+            try {
+                const info = await encryptToken(getToken(), password);
+                await uploadSyncKey(info);
+                syncKeyInfo = info;
+                closeSyncModal();
+                showToast('密码设置好了！其他设备打开网站，输入这个密码就能连接');
+            } catch (err) {
+                showFormError('pwSetupError', err.status === 401 || err.status === 403 || err.status === 404
+                    ? '保存失败：GitHub 密钥没有权限，请断开后重新连接'
+                    : '保存失败，可能是网络问题，请稍后再试');
+            } finally {
+                btn.disabled = false;
+                btn.textContent = '保存密码';
+            }
+        });
 
         document.getElementById('tokenSaveBtn').addEventListener('click', connectWithToken);
         tokenInput.addEventListener('paste', () => {

@@ -1421,8 +1421,7 @@
             }
         }
 
-        function updateSyncBanner() {
-            const banner = document.getElementById('syncBanner');
+        function updateSyncBanner(banner = document.getElementById('syncBanner')) {
             if (!banner) return;
             const message = SYNC_STATUS[syncStatus].banner;
             banner.hidden = !message;
@@ -1631,7 +1630,7 @@
             
             customCard.appendChild(customHeader);
             customCard.appendChild(syncBanner);
-            updateSyncBanner();
+            updateSyncBanner(syncBanner); // 此时还没放进页面，getElementById 找不到，所以直接传进去
 
             const customGrid = document.createElement('div');
             customGrid.className = 'links-grid';

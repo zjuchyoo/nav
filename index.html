@@ -1015,7 +1015,7 @@
         // 收藏夹以 GitHub 仓库里的 bookmarks.json 为准，浏览器里只是副本
         const GITHUB = { owner: 'zjuchyoo', repo: 'ZJUers_Web', branch: 'main', path: 'bookmarks.json' };
         const TOKEN_KEY = 'appleZjuersGithubToken';
-        const SYNC_KEY = 'appleZjuersSync'; // { synced, pending, sha }
+        const SYNC_KEY = 'appleZjuersSync'; // { base, pending }
 
         let customData = [];
         let isEditMode = false;
@@ -1232,14 +1232,16 @@
             try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; }
         }
 
+        // base: 上次和 GitHub 一致时的收藏列表（null 表示这台设备从没同步过）
+        // pending: 这台设备在 base 之后有没有改过
         function readSyncState() {
             try {
                 const state = JSON.parse(localStorage.getItem(SYNC_KEY));
                 if (state && typeof state === 'object') {
-                    return { synced: Boolean(state.synced), pending: Boolean(state.pending), sha: typeof state.sha === 'string' ? state.sha : null };
+                    return { base: normalizeBookmarks(state.base), pending: Boolean(state.pending) };
                 }
             } catch (e) {}
-            return { synced: false, pending: false, sha: null };
+            return { base: null, pending: false };
         }
 
         function writeSyncState(patch) {
@@ -1294,69 +1296,90 @@
             return { data, sha: null };
         }
 
-        async function pushRemote() {
-            const uploaded = JSON.stringify(customData);
-            const body = sha => ({
-                message: 'Update bookmarks',
-                content: encodeBase64(JSON.stringify(customData, null, 2) + '\n'),
-                branch: GITHUB.branch,
-                ...(sha ? { sha } : {})
-            });
+        // 旧版网站第一次打开时自动塞进去的示例，不当作用户自己的收藏
+        const isOldDemoBookmark = item => item.name === '🎓 我的CC98' && item.url === 'https://www.cc98.org';
 
-            let res = await githubContents('PUT', body(readSyncState().sha));
-            if (res.status === 409 || res.status === 422) {
-                // 其他设备先改过：把那边的版本存进历史（不丢），再用这台设备的版本覆盖
-                const remote = await fetchRemote();
-                if (remote.data.length && JSON.stringify(remote.data) !== uploaded) {
-                    pushHistory(remote.data, '其他设备上的修改');
+        // 三方合并：对比 base，分别找出本机和 GitHub 各自增删改了什么，合在一起，谁的修改都不丢
+        function mergeBookmarks(base, local, remote) {
+            const baseByUrl = new Map(base.map(item => [item.url, item]));
+            const remoteByUrl = new Map(remote.map(item => [item.url, item]));
+            const localUrls = new Set(local.map(item => item.url));
+            const merged = [];
+
+            for (const item of local) {
+                const baseItem = baseByUrl.get(item.url);
+                const remoteItem = remoteByUrl.get(item.url);
+                const changedHere = !baseItem || baseItem.name !== item.name;
+                if (!remoteItem) {
+                    // GitHub 上没有：要么是本机新加的（保留），要么是别的设备删了（本机没改过就跟着删）
+                    if (changedHere) merged.push(item);
+                } else {
+                    // 两边都有：本机改过名字用本机的，否则用 GitHub 上的
+                    merged.push(changedHere ? item : remoteItem);
                 }
-                res = await githubContents('PUT', body(remote.sha));
             }
-            if (!res.ok) throw syncError(res.status);
 
-            const json = await res.json();
-            const stillCurrent = JSON.stringify(customData) === uploaded;
-            writeSyncState({ synced: true, pending: !stillCurrent, sha: json.content.sha });
-            if (!stillCurrent) scheduleSync(); // 上传期间又有新修改
+            for (const item of remote) {
+                // GitHub 上新加、本机没有的：只要不是本机删掉的，就加进来
+                if (!localUrls.has(item.url) && !baseByUrl.has(item.url)) merged.push(item);
+            }
+            return merged;
         }
 
         async function syncOnce() {
-            let state = readSyncState();
             const hasToken = Boolean(getToken());
+            const state = readSyncState();
 
-            if (!state.pending) {
-                const remote = await fetchRemote();
-                if (remote.sha) state = writeSyncState({ sha: remote.sha });
-                const remoteJson = JSON.stringify(remote.data);
-
-                if (JSON.stringify(customData) !== remoteJson) {
-                    if (state.synced) {
-                        // 同步过的设备以 GitHub 为准，本机旧版本存进历史
-                        pushHistory(customData, '从 GitHub 同步');
-                        customData = remote.data;
-                    } else {
-                        // 这台设备第一次同步：两边合并，谁的都不丢
-                        const remoteUrls = new Set(remote.data.map(item => item.url));
-                        const merged = remote.data.concat(customData.filter(item => !remoteUrls.has(item.url)));
-                        if (JSON.stringify(merged) !== JSON.stringify(customData)) pushHistory(customData, '首次同步合并');
-                        customData = merged;
-                        if (JSON.stringify(merged) !== remoteJson) state = writeSyncState({ pending: true });
-                    }
-                    saveData();
-                    render();
-                }
-                if (!state.pending) {
-                    writeSyncState({ synced: true });
-                    setSyncStatus(hasToken ? 'synced' : 'readonly');
-                    return;
-                }
+            // 没密钥时读到的是网站上的副本，可能晚 1 分钟，不拿它和本机修改合并
+            if (state.pending && !hasToken) {
+                setSyncStatus('unsaved');
+                return;
             }
 
+            const remote = await fetchRemote();
+            let merged;
+            if (!state.base) {
+                merged = mergeBookmarks([], customData.filter(item => !isOldDemoBookmark(item)), remote.data);
+            } else if (!state.pending) {
+                merged = remote.data; // 本机没改过：以 GitHub 为准
+            } else {
+                merged = mergeBookmarks(state.base, customData, remote.data);
+            }
+
+            if (JSON.stringify(merged) !== JSON.stringify(customData)) {
+                pushHistory(customData, '同步');
+                customData = merged;
+                saveData();
+                render();
+            }
+
+            const uploaded = JSON.stringify(customData);
+            if (uploaded === JSON.stringify(remote.data)) {
+                writeSyncState({ base: remote.data, pending: false });
+                setSyncStatus(hasToken ? 'synced' : 'readonly');
+                return;
+            }
+
+            // 本机已经包含了这次读到的 GitHub 内容，把它记为新的 base
+            writeSyncState({ base: remote.data, pending: true });
             if (!hasToken) {
                 setSyncStatus('unsaved');
                 return;
             }
-            await pushRemote();
+
+            const res = await githubContents('PUT', {
+                message: 'Update bookmarks',
+                content: encodeBase64(JSON.stringify(customData, null, 2) + '\n'),
+                branch: GITHUB.branch,
+                sha: remote.sha
+            });
+            // 刚读完又被别的设备改了：稍后重新读、重新合并
+            if (res.status === 409 || res.status === 422) throw syncError('conflict');
+            if (!res.ok) throw syncError(res.status);
+
+            const stillCurrent = JSON.stringify(customData) === uploaded;
+            writeSyncState({ base: JSON.parse(uploaded), pending: !stillCurrent });
+            if (!stillCurrent) scheduleSync(); // 上传期间又有新修改
             setSyncStatus('synced');
         }
 
@@ -1376,6 +1399,8 @@
                     setSyncStatus('auth');
                 } else if (e.status === 403 || e.status === 404) {
                     setSyncStatus('forbidden');
+                } else if (e.status === 'conflict') {
+                    scheduleSync(500);
                 } else {
                     setSyncStatus('error');
                     scheduleSync(60000); // 网络问题，1 分钟后重试
@@ -1486,8 +1511,6 @@
             try { localStorage.setItem(TOKEN_KEY, token); } catch (e) { return alert('浏览器不允许保存密钥（可能是无痕模式）'); }
             tokenInput.value = '';
             justConnected = true;
-            // 连接后先读一次仓库再决定上传还是下载，避免用旧数据覆盖
-            writeSyncState({ sha: null });
             scheduleSync(0);
         }
 

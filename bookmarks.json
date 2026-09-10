@@ -24,10 +24,6 @@
     "url": "YouTube.com"
   },
   {
-    "name": "ipnet",
-    "url": "ip.net.coffee"
-  },
-  {
     "name": "学习助手",
     "url": "https://zjuchyoo.github.io/study-assistant/"
   },
@@ -54,5 +50,9 @@
   {
     "name": "吹雪云",
     "url": "吹雪云.com"
+  },
+  {
+    "name": "ipnet",
+    "url": "ip.net.coffee"
   }
 ]

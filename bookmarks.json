@@ -42,5 +42,9 @@
   {
     "name": "Sub2api",
     "url": "localhost:8080"
+  },
+  {
+    "name": "查老师",
+    "url": "chalaoshi.de"
   }
 ]

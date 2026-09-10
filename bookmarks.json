@@ -2,5 +2,9 @@
   {
     "name": "Claude",
     "url": "claude.ai"
+  },
+  {
+    "name": "Gemini",
+    "url": "gemini.google.com"
   }
 ]

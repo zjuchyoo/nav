@@ -32,6 +32,10 @@
     "url": "ip.net.coffee"
   },
   {
+    "name": "学习助手",
+    "url": "https://zjuchyoo.github.io/study-assistant/"
+  },
+  {
     "name": "粉笔",
     "url": "https://fenbi.com/"
   },
@@ -50,9 +54,5 @@
   {
     "name": "吹雪云",
     "url": "吹雪云.com"
-  },
-  {
-    "name": "学习助手",
-    "url": "https://zjuchyoo.github.io/study-assistant/"
   }
 ]

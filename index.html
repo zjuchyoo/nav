@@ -494,6 +494,132 @@
             color: white;
         }
 
+        /* History modal */
+        .modal.modal-wide {
+            max-width: 420px;
+            text-align: left;
+        }
+
+        .history-list {
+            max-height: 55vh;
+            overflow-y: auto;
+            display: flex;
+            flex-direction: column;
+            gap: 8px;
+            margin-bottom: 10px;
+            color: var(--text-secondary);
+            font-size: 13px;
+        }
+
+        .history-item {
+            display: flex;
+            align-items: center;
+            gap: 12px;
+            padding: 10px 12px;
+            border: 1px solid var(--card-border);
+            border-radius: var(--item-radius);
+        }
+
+        .history-info {
+            flex: 1;
+            min-width: 0;
+        }
+
+        .history-title {
+            color: var(--text-primary);
+            font-size: 14px;
+        }
+
+        .history-meta {
+            margin-top: 2px;
+            font-size: 12px;
+            white-space: nowrap;
+            overflow: hidden;
+            text-overflow: ellipsis;
+        }
+
+        .history-item .btn-system {
+            flex-shrink: 0;
+            padding: 6px 14px;
+        }
+
+        /* GitHub sync */
+        .btn-system.sync-warn {
+            border-color: var(--danger-color);
+            color: var(--danger-color);
+        }
+
+        .sync-steps {
+            margin: 0 0 16px 0;
+            padding-left: 20px;
+            color: var(--text-secondary);
+            font-size: 13px;
+            line-height: 1.8;
+        }
+
+        .sync-steps a {
+            color: var(--accent-color);
+        }
+
+        .sync-steps b {
+            color: var(--text-primary);
+            font-weight: 500;
+        }
+
+        .link-btn {
+            margin-top: 14px;
+            background: none;
+            border: none;
+            padding: 0;
+            color: var(--text-secondary);
+            font-size: 12px;
+            text-decoration: underline;
+            cursor: pointer;
+        }
+
+        /* Toast */
+        .toast {
+            position: fixed;
+            left: 50%;
+            bottom: 32px;
+            transform: translate(-50%, 20px);
+            opacity: 0;
+            pointer-events: none;
+            display: flex;
+            align-items: center;
+            gap: 16px;
+            max-width: calc(100vw - 40px);
+            box-sizing: border-box;
+            padding: 12px 18px;
+            background: rgba(35, 25, 45, 0.92);
+            border: 1px solid var(--card-border);
+            border-radius: 12px;
+            backdrop-filter: blur(20px);
+            -webkit-backdrop-filter: blur(20px);
+            box-shadow: 0 12px 32px rgba(0, 0, 0, 0.35);
+            color: var(--text-primary);
+            font-size: 14px;
+            z-index: 1100;
+            transition: opacity 0.25s, transform 0.25s cubic-bezier(0.16, 1, 0.3, 1);
+        }
+
+        .toast.show {
+            opacity: 1;
+            transform: translate(-50%, 0);
+            pointer-events: auto;
+        }
+
+        .toast-action {
+            background: none;
+            border: none;
+            padding: 0;
+            color: var(--accent-color);
+            font-size: 14px;
+            font-weight: 600;
+            white-space: nowrap;
+            cursor: pointer;
+        }
+
         /* Footer */
         footer {
             margin-top: auto;
@@ -544,6 +670,44 @@
                 <button class="btn-modal btn-modal-primary" id="modalSaveBtn">保存</button>
             </div>
         </div>
+    </div>
+
+    <div class="modal-overlay" id="historyModal">
+        <div class="modal modal-wide">
+            <h3>恢复收藏夹</h3>
+            <p>每次修改前都会自动存一份，点“恢复”即可回到当时的样子。恢复本身也能再恢复回来。</p>
+            <div class="history-list" id="historyList"></div>
+            <div class="modal-actions">
+                <button class="btn-modal btn-modal-cancel" id="historyCloseBtn">关闭</button>
+            </div>
+        </div>
+    </div>
+
+    <div class="modal-overlay" id="syncModal">
+        <div class="modal modal-wide">
+            <h3>同步到 GitHub</h3>
+            <p id="syncModalStatus"></p>
+            <div id="syncSetup">
+                <ol class="sync-steps">
+                    <li>打开 <a href="https://github.com/settings/personal-access-tokens/new" target="_blank" rel="noopener noreferrer">GitHub 创建密钥页面</a>（需要登录 zjuchyoo 账号）</li>
+                    <li><b>Token name</b> 随便填，<b>Expiration</b> 选最长</li>
+                    <li><b>Repository access</b> 选 Only select repositories → <b>ZJUers_Web</b></li>
+                    <li><b>Permissions</b> 里添加 <b>Contents</b>，设为 <b>Read and write</b></li>
+                    <li>点 Generate token，复制后粘贴到下面</li>
+                </ol>
+                <input type="password" id="tokenInput" class="form-control" placeholder="粘贴密钥（github_pat_ 开头）" autocomplete="off">
+            </div>
+            <div class="modal-actions">
+                <button class="btn-modal btn-modal-cancel" id="syncCloseBtn">关闭</button>
+                <button class="btn-modal btn-modal-primary" id="tokenSaveBtn">连接</button>
+            </div>
+            <button class="link-btn" id="tokenRemoveBtn" hidden>断开连接（删除这台设备上保存的密钥）</button>
+        </div>
+    </div>
+
+    <div class="toast" id="toast" role="status" aria-live="polite">
+        <span id="toastText"></span>
+        <button class="toast-action" id="toastAction" hidden></button>
     </div>
 
     <script>
@@ -698,11 +862,21 @@
           }
         ];
 
+        const STORAGE_KEY = 'appleZjuersCustom';
+        const HISTORY_KEY = 'appleZjuersCustomHistory';
+        const MAX_HISTORY = 30;
+        const DRAG_TYPE = 'application/x-zjuers-bookmark';
+
+        // 收藏夹以 GitHub 仓库里的 bookmarks.json 为准，浏览器里只是副本
+        const GITHUB = { owner: 'zjuchyoo', repo: 'ZJUers_Web', branch: 'main', path: 'bookmarks.json' };
+        const TOKEN_KEY = 'appleZjuersGithubToken';
+        const SYNC_KEY = 'appleZjuersSync'; // { synced, pending, sha }
+
         let customData = [];
         let isEditMode = false;
-        
+
         let targetList = ''; // 'custom' or 'original'
-        let targetCatIndex = -1;
+        let editingOriginal = null; // bookmark being edited in the modal, null when adding
 
         const allowedBookmarkProtocols = new Set(['http:', 'https:', 'file:']);
         const blockedBookmarkProtocols = new Set(['javascript:', 'data:', 'vbscript:', 'blob:']);
@@ -791,27 +965,369 @@
             return blockedBookmarkProtocols.has(getBookmarkProtocol(rawUrl.trim()));
         }
 
-        function init() {
-            // 加载用户的定制数据
-            const savedCustom = localStorage.getItem('appleZjuersCustom');
-            if (savedCustom) {
-                try { customData = JSON.parse(savedCustom); } 
-                catch(e) { customData = []; }
+        function normalizeBookmarks(value) {
+            if (!Array.isArray(value)) return null;
+            return value.filter(item => item && typeof item.name === 'string' && typeof item.url === 'string'
+                && item.name.trim() && item.url.trim());
+        }
+
+        // Returns the saved list ([] if nothing saved), or null if the saved value is unreadable.
+        function readStoredBookmarks() {
+            let raw;
+            try { raw = localStorage.getItem(STORAGE_KEY); } catch (e) { return null; }
+            if (raw === null) return [];
+            try { return normalizeBookmarks(JSON.parse(raw)); } catch (e) { return null; }
+        }
+
+        function readHistory() {
+            try {
+                const parsed = JSON.parse(localStorage.getItem(HISTORY_KEY) || '[]');
+                return Array.isArray(parsed)
+                    ? parsed.filter(entry => entry && typeof entry.time === 'number' && normalizeBookmarks(entry.data))
+                    : [];
+            } catch (e) {
+                return [];
             }
-            
-            // 为了展示给用户看，如果没有自定义网址，先加一个演示
-            if (customData.length === 0) {
-                customData = [
-                    { name: "🎓 我的CC98", url: "https://www.cc98.org" }
-                ];
+        }
+
+        function pushHistory(data, reason) {
+            const history = readHistory();
+            if (history[0] && JSON.stringify(history[0].data) === JSON.stringify(data)) return;
+            history.unshift({ time: Date.now(), reason, data });
+            try { localStorage.setItem(HISTORY_KEY, JSON.stringify(history.slice(0, MAX_HISTORY))); } catch (e) {}
+        }
+
+        function init() {
+            let raw = null;
+            try { raw = localStorage.getItem(STORAGE_KEY); } catch (e) {}
+
+            if (raw === null) {
+                // 本机没有副本：有历史就先用历史，随后从 GitHub 拉取
+                const latest = readHistory()[0];
+                customData = latest ? latest.data : [];
                 saveData();
+            } else {
+                const stored = readStoredBookmarks();
+                if (stored) {
+                    customData = stored;
+                } else {
+                    // 数据损坏时不覆盖：先把原文另存一份，再退回最近一次备份
+                    try { localStorage.setItem(STORAGE_KEY + 'Broken', raw); } catch (e) {}
+                    const latest = readHistory()[0];
+                    customData = latest ? latest.data : [];
+                    saveData();
+                    showToast('收藏数据读取失败，已自动恢复到最近一次备份');
+                }
+            }
+
+            // 请求浏览器不要在空间紧张时自动清理本站数据
+            if (navigator.storage && navigator.storage.persist) {
+                navigator.storage.persisted()
+                    .then(persisted => persisted || navigator.storage.persist())
+                    .catch(() => {});
             }
 
             render();
+            scheduleSync(0);
         }
 
         function saveData() {
-            localStorage.setItem('appleZjuersCustom', JSON.stringify(customData));
+            try {
+                localStorage.setItem(STORAGE_KEY, JSON.stringify(customData));
+                return true;
+            } catch (e) {
+                alert('收藏保存失败：浏览器不允许本网站存储数据（可能是无痕模式或存储空间已满）。建议先点“导出”备份。');
+                return false;
+            }
+        }
+
+        // 所有修改都走这里：先确认没被其他标签页改过，再存一份修改前的版本，最后保存
+        function commitChange(reason, mutate) {
+            const stored = readStoredBookmarks();
+            if (stored && JSON.stringify(stored) !== JSON.stringify(customData)) {
+                customData = stored;
+                render();
+                showToast('收藏夹在其他标签页里改过，已同步到最新，请再操作一次');
+                return false;
+            }
+            pushHistory(customData, reason);
+            mutate();
+            saveData();
+            writeSyncState({ pending: true });
+            render();
+            scheduleSync();
+            return true;
+        }
+
+        function syncFromStorage() {
+            const stored = readStoredBookmarks();
+            if (stored && JSON.stringify(stored) !== JSON.stringify(customData)) {
+                customData = stored;
+                render();
+            }
+        }
+
+        window.addEventListener('storage', (e) => {
+            if (e.key === STORAGE_KEY || e.key === null) syncFromStorage();
+        });
+        window.addEventListener('pageshow', syncFromStorage);
+        document.addEventListener('visibilitychange', () => {
+            if (document.hidden) return;
+            syncFromStorage();
+            scheduleSync(0);
+        });
+        window.addEventListener('online', () => scheduleSync(0));
+
+        // ---------- GitHub 同步 ----------
+        let syncStatus = 'idle';
+        let syncTimer = null;
+        let syncRunning = false;
+
+        function getToken() {
+            try { return localStorage.getItem(TOKEN_KEY) || ''; } catch (e) { return ''; }
+        }
+
+        function readSyncState() {
+            try {
+                const state = JSON.parse(localStorage.getItem(SYNC_KEY));
+                if (state && typeof state === 'object') {
+                    return { synced: Boolean(state.synced), pending: Boolean(state.pending), sha: typeof state.sha === 'string' ? state.sha : null };
+                }
+            } catch (e) {}
+            return { synced: false, pending: false, sha: null };
+        }
+
+        function writeSyncState(patch) {
+            const state = { ...readSyncState(), ...patch };
+            try { localStorage.setItem(SYNC_KEY, JSON.stringify(state)); } catch (e) {}
+            return state;
+        }
+
+        function encodeBase64(text) {
+            let binary = '';
+            new TextEncoder().encode(text).forEach(byte => { binary += String.fromCharCode(byte); });
+            return btoa(binary);
+        }
+
+        function decodeBase64(base64) {
+            const binary = atob(base64.replace(/\s/g, ''));
+            return new TextDecoder().decode(Uint8Array.from(binary, char => char.charCodeAt(0)));
+        }
+
+        function syncError(status) {
+            return Object.assign(new Error(`sync failed: ${status}`), { status });
+        }
+
+        function githubContents(method, body) {
+            const url = `https://api.github.com/repos/${GITHUB.owner}/${GITHUB.repo}/contents/${GITHUB.path}`
+                + (method === 'GET' ? `?ref=${GITHUB.branch}` : '');
+            const headers = {
+                Authorization: `Bearer ${getToken()}`,
+                Accept: 'application/vnd.github+json',
+                'X-GitHub-Api-Version': '2022-11-28'
+            };
+            if (body) headers['Content-Type'] = 'application/json';
+            return fetch(url, { method, headers, cache: 'no-store', body: body ? JSON.stringify(body) : undefined });
+        }
+
+        // 有密钥时直接读仓库（最新）；没有时读网站上的 bookmarks.json（发布后约 1 分钟更新）
+        async function fetchRemote() {
+            if (getToken()) {
+                const res = await githubContents('GET');
+                if (res.status === 404) throw syncError(404);
+                if (!res.ok) throw syncError(res.status);
+                const json = await res.json();
+                const data = normalizeBookmarks(JSON.parse(decodeBase64(json.content)));
+                if (!data) throw syncError('bad-data');
+                return { data, sha: json.sha };
+            }
+            const res = await fetch(`${GITHUB.path}?t=${Date.now()}`, { cache: 'no-store' });
+            if (res.status === 404) return { data: [], sha: null };
+            if (!res.ok) throw syncError(res.status);
+            const data = normalizeBookmarks(await res.json());
+            if (!data) throw syncError('bad-data');
+            return { data, sha: null };
+        }
+
+        async function pushRemote() {
+            const uploaded = JSON.stringify(customData);
+            const body = sha => ({
+                message: 'Update bookmarks',
+                content: encodeBase64(JSON.stringify(customData, null, 2) + '\n'),
+                branch: GITHUB.branch,
+                ...(sha ? { sha } : {})
+            });
+
+            let res = await githubContents('PUT', body(readSyncState().sha));
+            if (res.status === 409 || res.status === 422) {
+                // 其他设备先改过：把那边的版本存进历史（不丢），再用这台设备的版本覆盖
+                const remote = await fetchRemote();
+                if (remote.data.length && JSON.stringify(remote.data) !== uploaded) {
+                    pushHistory(remote.data, '其他设备上的修改');
+                }
+                res = await githubContents('PUT', body(remote.sha));
+            }
+            if (!res.ok) throw syncError(res.status);
+
+            const json = await res.json();
+            const stillCurrent = JSON.stringify(customData) === uploaded;
+            writeSyncState({ synced: true, pending: !stillCurrent, sha: json.content.sha });
+            if (!stillCurrent) scheduleSync(); // 上传期间又有新修改
+        }
+
+        async function syncOnce() {
+            let state = readSyncState();
+            const hasToken = Boolean(getToken());
+
+            if (!state.pending) {
+                const remote = await fetchRemote();
+                if (remote.sha) state = writeSyncState({ sha: remote.sha });
+                const remoteJson = JSON.stringify(remote.data);
+
+                if (JSON.stringify(customData) !== remoteJson) {
+                    if (state.synced) {
+                        // 同步过的设备以 GitHub 为准，本机旧版本存进历史
+                        pushHistory(customData, '从 GitHub 同步');
+                        customData = remote.data;
+                    } else {
+                        // 这台设备第一次同步：两边合并，谁的都不丢
+                        const remoteUrls = new Set(remote.data.map(item => item.url));
+                        const merged = remote.data.concat(customData.filter(item => !remoteUrls.has(item.url)));
+                        if (JSON.stringify(merged) !== JSON.stringify(customData)) pushHistory(customData, '首次同步合并');
+                        customData = merged;
+                        if (JSON.stringify(merged) !== remoteJson) state = writeSyncState({ pending: true });
+                    }
+                    saveData();
+                    render();
+                }
+                if (!state.pending) {
+                    writeSyncState({ synced: true });
+                    setSyncStatus(hasToken ? 'synced' : 'readonly');
+                    return;
+                }
+            }
+
+            if (!hasToken) {
+                setSyncStatus('unsaved');
+                return;
+            }
+            await pushRemote();
+            setSyncStatus('synced');
+        }
+
+        function scheduleSync(delay = 1200) {
+            clearTimeout(syncTimer);
+            syncTimer = setTimeout(runSync, delay);
+        }
+
+        async function runSync() {
+            if (syncRunning) return scheduleSync();
+            syncRunning = true;
+            setSyncStatus('syncing');
+            try {
+                await syncOnce();
+            } catch (e) {
+                if (e.status === 401) {
+                    setSyncStatus('auth');
+                } else if (e.status === 403 || e.status === 404) {
+                    setSyncStatus('forbidden');
+                } else {
+                    setSyncStatus('error');
+                    scheduleSync(60000); // 网络问题，1 分钟后重试
+                }
+            } finally {
+                syncRunning = false;
+            }
+        }
+
+        const SYNC_STATUS = {
+            idle:      { label: '同步',     warn: false, text: '' },
+            syncing:   { label: '同步中',   warn: false, text: '正在和 GitHub 同步…' },
+            synced:    { label: '已同步',   warn: false, text: '已连接，收藏夹已保存到 GitHub。在任何设备打开网站都能看到。' },
+            readonly:  { label: '未连接',   warn: false, text: '收藏夹是从 GitHub 读取的。这台设备还没连接，所以修改只会存在本机，不会上传。' },
+            unsaved:   { label: '未上传',   warn: true,  text: '这台设备上有修改还没上传到 GitHub。连接后会自动上传。' },
+            error:     { label: '同步失败', warn: true,  text: '暂时连不上 GitHub，修改已存在本机，会自动重试。' },
+            auth:      { label: '需重新连接', warn: true, text: '密钥已失效或已过期，请重新生成一个并粘贴到下面。' },
+            forbidden: { label: '需重新连接', warn: true, text: '密钥没有 ZJUers_Web 仓库的 Contents 读写权限，请按步骤重新生成。' }
+        };
+
+        function setSyncStatus(status) {
+            syncStatus = status;
+            updateSyncButton();
+            if (syncModal.classList.contains('active')) updateSyncModal();
+        }
+
+        function syncButtonHtml() {
+            const info = SYNC_STATUS[syncStatus];
+            return `<svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M17.5 19H9a7 7 0 1 1 6.71-9h1.79a4.5 4.5 0 1 1 0 9Z"></path></svg> ${info.label}`;
+        }
+
+        function updateSyncButton() {
+            const btn = document.getElementById('syncBtn');
+            if (!btn) return;
+            btn.innerHTML = syncButtonHtml();
+            btn.classList.toggle('sync-warn', SYNC_STATUS[syncStatus].warn);
+            btn.title = SYNC_STATUS[syncStatus].text || '同步到 GitHub';
+        }
+
+        const syncModal = document.getElementById('syncModal');
+        const tokenInput = document.getElementById('tokenInput');
+
+        function updateSyncModal() {
+            const connected = Boolean(getToken()) && !['auth', 'forbidden'].includes(syncStatus);
+            document.getElementById('syncModalStatus').textContent = SYNC_STATUS[syncStatus].text
+                || '把收藏夹保存到你的 GitHub 仓库，浏览器清理数据、换设备都不会丢。每台设备只需连接一次。';
+            document.getElementById('syncSetup').hidden = connected;
+            document.getElementById('tokenSaveBtn').hidden = connected;
+            document.getElementById('tokenRemoveBtn').hidden = !getToken();
+        }
+
+        function openSyncModal() {
+            tokenInput.value = '';
+            updateSyncModal();
+            syncModal.classList.add('active');
+        }
+
+        function closeSyncModal() {
+            syncModal.classList.remove('active');
+        }
+
+        document.getElementById('syncCloseBtn').addEventListener('click', closeSyncModal);
+        syncModal.addEventListener('click', (e) => {
+            if (e.target === syncModal) closeSyncModal();
+        });
+
+        document.getElementById('tokenSaveBtn').addEventListener('click', () => {
+            const token = tokenInput.value.trim();
+            if (!token) return alert('请先粘贴密钥');
+            try { localStorage.setItem(TOKEN_KEY, token); } catch (e) { return alert('浏览器不允许保存密钥（可能是无痕模式）'); }
+            tokenInput.value = '';
+            // 连接后先读一次仓库再决定上传还是下载，避免用旧数据覆盖
+            writeSyncState({ sha: null });
+            scheduleSync(0);
+        });
+
+        document.getElementById('tokenRemoveBtn').addEventListener('click', () => {
+            if (!confirm('断开后这台设备不再上传修改（GitHub 上已保存的收藏不受影响）。确定断开吗？')) return;
+            try { localStorage.removeItem(TOKEN_KEY); } catch (e) {}
+            scheduleSync(0);
+            updateSyncModal();
+        });
+
+        let toastTimer = null;
+        function showToast(text, actionLabel, onAction) {
+            const toast = document.getElementById('toast');
+            const action = document.getElementById('toastAction');
+            document.getElementById('toastText').textContent = text;
+            action.hidden = !actionLabel;
+            action.textContent = actionLabel || '';
+            action.onclick = () => {
+                toast.classList.remove('show');
+                if (onAction) onAction();
+            };
+            toast.classList.add('show');
+            clearTimeout(toastTimer);
+            toastTimer = setTimeout(() => toast.classList.remove('show'), actionLabel ? 8000 : 4000);
         }
 
         function render() {
@@ -831,9 +1347,11 @@
                 
             customHeader.innerHTML = `
                 <h2 class="category-title">✨ 收藏夹</h2>
-                <div style="display: flex; gap: 8px;">
+                <div style="display: flex; flex-wrap: wrap; justify-content: flex-end; gap: 8px;">
+                    <button id="syncBtn" class="btn-system${SYNC_STATUS[syncStatus].warn ? ' sync-warn' : ''}" style="margin: 0;" title="${SYNC_STATUS[syncStatus].text || '同步到 GitHub'}">${syncButtonHtml()}</button>
                     <button id="importBtn" class="btn-system" style="margin: 0;" title="导入书签"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="7 10 12 15 17 10"></polyline><line x1="12" y1="15" x2="12" y2="3"></line></svg></button>
                     <button id="exportBtn" class="btn-system" style="margin: 0;" title="导出书签"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M21 15v4a2 2 0 0 1-2 2H5a2 2 0 0 1-2-2v-4"></path><polyline points="17 8 12 3 7 8"></polyline><line x1="12" y1="3" x2="12" y2="15"></line></svg></button>
+                    <button id="historyBtn" class="btn-system" style="margin: 0;" title="恢复历史版本"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><path d="M3 12a9 9 0 1 0 3-6.7L3 8"></path><path d="M3 3v5h5"></path><path d="M12 7v5l3 2"></path></svg></button>
                     ${btnHtml}
                 </div>
             `;
@@ -859,27 +1377,28 @@
                     if (!file) return;
                     const reader = new FileReader();
                     reader.onload = (event) => {
+                        let importedData;
                         try {
-                            const importedData = JSON.parse(event.target.result);
-                            if (Array.isArray(importedData)) {
-                                const validData = importedData.filter(item => item.name && item.url);
-                                if (validData.length > 0) {
-                                    if (confirm(`成功读取 ${validData.length} 个书签。\n\n点击"确定"覆盖当前书签，点击"取消"追加到当前书签后。`)) {
-                                        customData = validData;
-                                    } else {
-                                        customData = customData.concat(validData);
-                                    }
-                                    saveData();
-                                    render();
-                                    alert('导入成功！');
-                                } else {
-                                    alert('导入失败：未发现有效的书签数据。');
-                                }
-                            } else {
-                                alert('导入失败：文件格式不正确。');
-                            }
+                            importedData = normalizeBookmarks(JSON.parse(event.target.result));
                         } catch (err) {
-                            alert('导入失败：无法解析 JSON 文件。');
+                            return alert('导入失败：无法解析 JSON 文件。');
+                        }
+                        if (!importedData) return alert('导入失败：文件格式不正确。');
+
+                        const validData = importedData.filter(item => !isUnsafeBookmarkUrl(item.url));
+                        if (validData.length === 0) return alert('导入失败：未发现有效的书签数据。');
+
+                        // 只追加，不覆盖；已存在的网址跳过
+                        const existingUrls = new Set(customData.map(item => item.url));
+                        const newItems = validData.filter(item => !existingUrls.has(item.url));
+                        if (newItems.length === 0) return showToast('文件里的书签都已经在收藏夹里了');
+
+                        const done = commitChange(`导入 ${newItems.length} 个书签`, () => {
+                            customData = customData.concat(newItems.map(item => ({ name: item.name, url: item.url })));
+                        });
+                        if (done) {
+                            const skipped = validData.length - newItems.length;
+                            showToast(`已导入 ${newItems.length} 个书签` + (skipped ? `，跳过 ${skipped} 个重复的` : ''));
                         }
                     };
                     reader.readAsText(file);
@@ -894,12 +1413,17 @@
                 const url = URL.createObjectURL(blob);
                 const a = document.createElement('a');
                 a.href = url;
-                a.download = "zjuers_bookmarks.json";
+                const now = new Date();
+                const pad = n => String(n).padStart(2, '0');
+                a.download = `zjuers_bookmarks_${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}.json`;
                 document.body.appendChild(a);
                 a.click();
                 document.body.removeChild(a);
                 URL.revokeObjectURL(url);
             });
+
+            customHeader.querySelector('#historyBtn').addEventListener('click', openHistory);
+            customHeader.querySelector('#syncBtn').addEventListener('click', openSyncModal);
             
             customCard.appendChild(customHeader);
 
@@ -914,36 +1438,42 @@
                     wrapper.draggable = true;
                     wrapper.style.cursor = 'grab';
                     
+                    // 用专属类型标记拖拽，避免把外面拖进来的文字当成序号
+                    const isBookmarkDrag = (e) => Array.from(e.dataTransfer.types).includes(DRAG_TYPE);
+
                     wrapper.addEventListener('dragstart', (e) => {
-                        e.dataTransfer.setData('text/plain', linkIndex);
+                        e.dataTransfer.setData(DRAG_TYPE, String(linkIndex));
                         e.dataTransfer.effectAllowed = 'move';
                         wrapper.style.opacity = '0.4';
                     });
-                    
+
                     wrapper.addEventListener('dragend', () => {
                         wrapper.style.opacity = '1';
                         document.querySelectorAll('.link-wrapper').forEach(el => el.style.borderLeft = '');
                     });
-                    
+
                     wrapper.addEventListener('dragover', (e) => {
+                        if (!isBookmarkDrag(e)) return;
                         e.preventDefault();
                         e.dataTransfer.dropEffect = 'move';
                         wrapper.style.borderLeft = '2px solid var(--accent-color)';
                     });
-                    
+
                     wrapper.addEventListener('dragleave', () => {
                         wrapper.style.borderLeft = '';
                     });
-                    
+
                     wrapper.addEventListener('drop', (e) => {
-                        e.preventDefault();
                         wrapper.style.borderLeft = '';
-                        const draggedIndex = parseInt(e.dataTransfer.getData('text/plain'), 10);
-                        if (!isNaN(draggedIndex) && draggedIndex !== linkIndex) {
-                            const item = customData.splice(draggedIndex, 1)[0];
-                            customData.splice(linkIndex, 0, item);
-                            saveData();
-                            render();
+                        if (!isBookmarkDrag(e)) return;
+                        e.preventDefault();
+                        const draggedIndex = Number(e.dataTransfer.getData(DRAG_TYPE));
+                        if (Number.isInteger(draggedIndex) && draggedIndex >= 0 && draggedIndex < customData.length
+                            && draggedIndex !== linkIndex) {
+                            commitChange('调整顺序', () => {
+                                const item = customData.splice(draggedIndex, 1)[0];
+                                customData.splice(linkIndex, 0, item);
+                            });
                         }
                     });
                 }
@@ -978,11 +1508,17 @@
                 const delBtn = document.createElement('button');
                 delBtn.className = 'delete-btn';
                 delBtn.innerHTML = '×';
+                delBtn.title = '删除';
+                delBtn.setAttribute('aria-label', `删除 ${link.name}`);
                 delBtn.onclick = (e) => {
                     e.preventDefault();
-                    customData.splice(linkIndex, 1);
-                    saveData();
-                    render();
+                    const done = commitChange(`删除「${link.name}」`, () => customData.splice(linkIndex, 1));
+                    if (!done) return;
+                    showToast(`已删除「${link.name}」`, '撤销', () => {
+                        commitChange(`撤销删除「${link.name}」`, () => {
+                            customData.splice(Math.min(linkIndex, customData.length), 0, link);
+                        });
+                    });
                 };
 
                 wrapper.appendChild(a);
@@ -1041,8 +1577,8 @@
 
         function openModal(listType, catIndex) {
             targetList = listType;
-            targetCatIndex = catIndex;
             const existingLink = listType === 'custom' && catIndex >= 0 ? customData[catIndex] : null;
+            editingOriginal = existingLink ? { name: existingLink.name, url: existingLink.url } : null;
             const isEditing = Boolean(existingLink);
 
             inputName.value = existingLink && typeof existingLink.name === 'string' ? existingLink.name : '';
@@ -1071,21 +1607,89 @@
             
             if (targetList === 'custom') {
                 const bookmark = { name, url };
-                if (targetCatIndex >= 0 && targetCatIndex < customData.length) {
-                    customData[targetCatIndex] = { ...customData[targetCatIndex], ...bookmark };
-                } else {
-                    customData.push(bookmark);
-                }
-                saveData();
-                render();
+                const original = editingOriginal;
+                const reason = original ? `编辑「${original.name}」` : `添加「${name}」`;
+                const done = commitChange(reason, () => {
+                    // 按原来的名称和网址找，防止列表在别处变动后改错条目；找不到就当新收藏加上
+                    const index = original
+                        ? customData.findIndex(item => item.name === original.name && item.url === original.url)
+                        : -1;
+                    if (index >= 0) {
+                        customData[index] = { ...customData[index], ...bookmark };
+                    } else {
+                        customData.push(bookmark);
+                    }
+                });
+                if (!done) return; // 已同步最新数据，弹窗保持打开，再点一次保存即可
             }
             closeModal();
         });
 
-        // 回车提交
-        modal.addEventListener('keyup', (e) => {
-            if(e.key === 'Enter') document.getElementById('modalSaveBtn').click();
-            if(e.key === 'Escape') closeModal();
+        // 回车提交（输入法选词时按的回车不算）
+        modal.addEventListener('keydown', (e) => {
+            if (e.isComposing || e.keyCode === 229) return;
+            if (e.key === 'Enter') document.getElementById('modalSaveBtn').click();
+            if (e.key === 'Escape') closeModal();
+        });
+
+        // 历史版本
+        const historyModal = document.getElementById('historyModal');
+
+        function formatHistoryTime(time) {
+            const d = new Date(time);
+            const pad = n => String(n).padStart(2, '0');
+            return `${d.getMonth() + 1}月${d.getDate()}日 ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+        }
+
+        function openHistory() {
+            const list = document.getElementById('historyList');
+            list.innerHTML = '';
+            const history = readHistory();
+
+            if (history.length === 0) {
+                list.textContent = '还没有历史记录。以后每次修改收藏夹，都会自动保存一份修改前的版本。';
+            }
+
+            history.forEach(entry => {
+                const item = document.createElement('div');
+                item.className = 'history-item';
+
+                const info = document.createElement('div');
+                info.className = 'history-info';
+                const title = document.createElement('div');
+                title.className = 'history-title';
+                title.textContent = `${entry.reason || '修改'}之前`;
+                const meta = document.createElement('div');
+                meta.className = 'history-meta';
+                const names = entry.data.map(link => link.name).join('、');
+                meta.textContent = `${formatHistoryTime(entry.time)} · ${entry.data.length} 个 · ${names || '空'}`;
+                meta.title = names;
+                info.append(title, meta);
+
+                const restoreBtn = document.createElement('button');
+                restoreBtn.className = 'btn-system';
+                restoreBtn.textContent = '恢复';
+                restoreBtn.addEventListener('click', () => {
+                    const done = commitChange('恢复历史版本', () => {
+                        customData = entry.data.map(link => ({ ...link }));
+                    });
+                    historyModal.classList.remove('active');
+                    if (done) showToast(`已恢复到 ${formatHistoryTime(entry.time)} 的版本`);
+                });
+
+                item.append(info, restoreBtn);
+                list.appendChild(item);
+            });
+
+            historyModal.classList.add('active');
+        }
+
+        document.getElementById('historyCloseBtn').addEventListener('click', () => historyModal.classList.remove('active'));
+        historyModal.addEventListener('click', (e) => {
+            if (e.target === historyModal) historyModal.classList.remove('active');
+        });
+        document.addEventListener('keydown', (e) => {
+            if (e.key === 'Escape') historyModal.classList.remove('active');
         });
 
         const engineToggle = document.getElementById('engine-toggle');

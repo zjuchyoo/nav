@@ -24,10 +24,6 @@
     "url": "YouTube.com"
   },
   {
-    "name": "ippure",
-    "url": "ippure.com"
-  },
-  {
     "name": "ipnet",
     "url": "ip.net.coffee"
   },
@@ -50,6 +46,10 @@
   {
     "name": "查老师",
     "url": "chalaoshi.de"
+  },
+  {
+    "name": "ippure",
+    "url": "ippure.com"
   },
   {
     "name": "吹雪云",

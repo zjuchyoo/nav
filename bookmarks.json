@@ -38,5 +38,9 @@
   {
     "name": "LDXP",
     "url": "https://aihaotan-market-watch.zjuchyoo.workers.dev/"
+  },
+  {
+    "name": "Sub2api",
+    "url": "localhost:8080"
   }
 ]

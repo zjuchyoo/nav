@@ -20,6 +20,10 @@
     "url": "ChatGPT.com"
   },
   {
+    "name": "Grok",
+    "url": "grok.com"
+  },
+  {
     "name": "YouTube",
     "url": "YouTube.com"
   },
@@ -70,9 +74,5 @@
   {
     "name": "接码1",
     "url": "https://lubansms.com/v2/keywordReceiveSms"
-  },
-  {
-    "name": "Grok",
-    "url": "grok.com"
   }
 ]

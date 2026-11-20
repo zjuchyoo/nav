@@ -40,6 +40,10 @@
     "url": "chalaoshi.de"
   },
   {
+    "name": "Kuromis",
+    "url": "Kuromis.com"
+  },
+  {
     "name": "ippure",
     "url": "ippure.com"
   },
@@ -74,9 +78,5 @@
   {
     "name": "接码1",
     "url": "https://lubansms.com/v2/keywordReceiveSms"
-  },
-  {
-    "name": "Kuromis",
-    "url": "Kuromis.com"
   }
 ]

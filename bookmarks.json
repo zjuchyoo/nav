@@ -32,10 +32,6 @@
     "url": "https://zjuchyoo.github.io/study-assistant/"
   },
   {
-    "name": "Sub2api",
-    "url": "localhost:8080"
-  },
-  {
     "name": "LDXP",
     "url": "https://aihaotan-market-watch.zjuchyoo.workers.dev/"
   },
@@ -70,6 +66,10 @@
   {
     "name": "SEAGM",
     "url": "http://seagm.com/zh/card"
+  },
+  {
+    "name": "Sub2api",
+    "url": "localhost:8080"
   },
   {
     "name": "接码1",
